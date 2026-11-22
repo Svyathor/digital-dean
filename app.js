@@ -92,6 +92,7 @@ const seen = () => store.get('dd.seen.' + S.uid) || [];
 const unreadCount = () => S.data.notices.filter((n) => !seen().includes(n[2])).length;
 const toMin = (t) => { const [h, m] = t.split(':').map(Number); return h * 60 + m; };
 const daysTo = (iso) => Math.ceil((new Date(iso + 'T00:00:00') - new Date(new Date().toDateString())) / 864e5);
+const vtn = (id) => 't-' + String(id).replace(/[^A-Za-z0-9-]/g, '');
 const plural = (n, a, b, c) => { const m10 = n % 10, m100 = n % 100; return m10 === 1 && m100 !== 11 ? a : m10 >= 2 && m10 <= 4 && (m100 < 10 || m100 >= 20) ? b : c; };
 function lessonHTML(l, live) {
   const [s, e, title, kind, room, teacher, ch = {}] = l;
@@ -106,11 +107,11 @@ const ICONS = {
   apps: '<path d="M7 3h8l4 4v14H7zM15 3v4h4M10 12h6M10 16h6"/>',
   profile: '<circle cx="12" cy="8" r="4"/><path d="M4 21c1-4 4-6 8-6s7 2 8 6"/>',
 };
-const SEAL = `<svg class="seal" viewBox="0 0 40 40" aria-hidden="true"><circle cx="20" cy="20" r="18" fill="none" stroke="currentColor" stroke-width="1.5"/><circle cx="20" cy="20" r="14" fill="none" stroke="currentColor" stroke-width=".8" stroke-dasharray="2 2"/><text x="20" y="26" text-anchor="middle" font-family="Prata,serif" font-size="18" fill="currentColor">Д</text></svg>`;
+const SEAL = `<svg class="seal" viewBox="0 0 40 40" aria-hidden="true"><circle cx="20" cy="20" r="18" fill="none" stroke="currentColor" stroke-width="1.5"/><circle cx="20" cy="20" r="14" fill="none" stroke="currentColor" stroke-width=".8" stroke-dasharray="2 2"/><text x="20" y="26" text-anchor="middle" font-family="-apple-system,Inter,sans-serif" font-size="16" font-weight="700" fill="currentColor">Д</text></svg>`;
 
 function shell(route, body) {
   const now = new Date(); const u = unreadCount();
-  const tab = (r, label) => `<a href="#/${r}" ${route === r ? 'aria-current="page"' : ''}><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">${ICONS[r]}</svg>${label}</a>`;
+  const tab = (r, label) => `<a href="#/${r}" ${route === r ? 'aria-current="page"' : ''}>${route === r ? '<span class="pill"></span>' : ''}<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">${ICONS[r]}</svg>${label}</a>`;
   return `<div class="wrap"><header class="mast"><a class="brand" href="#/today">${SEAL}<span><b>Деканат</b><small>кабинет студента</small></span></a>
     <a class="iconbtn" href="#/notices" aria-label="Уведомления, непрочитанных: ${u}"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M6 8a6 6 0 1 1 12 0c0 7 3 8 3 8H3s3-1 3-8M10 20a2 2 0 0 0 4 0"/></svg>${u ? `<span class="dot">${u}</span>` : ''}</a></header>
     <div class="dateline"><span>${DOWF[now.getDay()]}, ${fmtD(now)}</span><span>${esc(S.data.profile.group)}</span></div>
@@ -196,7 +197,7 @@ function vGrades() {
 function vApps() {
   return shell('apps', `<section class="lead"><h1>Заявки и справки</h1><p>Закажите справку или подайте заявление — без очереди в деканат.</p></section>
     <a class="btn w" href="#/apps/new">+ Новая заявка</a>
-    <section class="sec"><h2>История</h2><div class="card">${S.apps.length ? S.apps.map((a) => { const [l, c] = STATUS[status(a)]; return `<a class="app" href="#/apps/${encodeURIComponent(a.id)}"><div><h3>${esc(a.type)}</h3><small>№ ${esc(a.id)}, ${fmtD(new Date(a.created))}</small></div><span class="stamp ${c}">${l}</span></a>`; }).join('') : '<div class="empty">Здесь появятся ваши заявки</div>'}</div></section>`);
+    <section class="sec"><h2>История</h2><div class="card">${S.apps.length ? S.apps.map((a) => { const [l, c] = STATUS[status(a)]; return `<a class="app" href="#/apps/${encodeURIComponent(a.id)}"><div><h3 style="view-transition-name:${vtn(a.id)}">${esc(a.type)}</h3><small>№ ${esc(a.id)}, ${fmtD(new Date(a.created))}</small></div><span class="stamp ${c}">${l}</span></a>`; }).join('') : '<div class="empty">Здесь появятся ваши заявки</div>'}</div></section>`);
 }
 
 function vNewApp() {
@@ -221,7 +222,7 @@ function vAppDetail(id) {
   const steps = [['new', 'Заявка принята', 'Номер присвоен, деканат получил уведомление'], ['work', 'В работе', 'Специалист готовит документ'], ['ready', 'Готово', a.format?.startsWith('Бумажная') ? 'Заберите в деканате, окно 3, с паспортом' : 'Документ с электронной подписью — в профиле и на почте']];
   const order = ['new', 'work', 'ready'];
   return shell('apps', `<a class="back" href="#/apps">← Заявки</a>
-    <section class="lead"><small style="color:var(--muted)">№ ${esc(a.id)} от ${fmtD(new Date(a.created))}</small><h1>${esc(a.type)}</h1><span class="stamp huge ${c}">${l}</span></section>
+    <section class="lead"><small style="color:var(--muted)">№ ${esc(a.id)} от ${fmtD(new Date(a.created))}</small><h1 style="view-transition-name:${vtn(a.id)}">${esc(a.type)}</h1><span class="stamp huge ${c}">${l}</span></section>
     <div class="card pad"><dl class="kv"><dt>Куда</dt><dd>${esc(a.target || '—')}</dd><dt>Формат</dt><dd>${esc(a.format || 'Электронная с подписью')}</dd>${a.note ? `<dt>Комментарий</dt><dd>${esc(a.note)}</dd>` : ''}</dl>
     <ol class="tl">${steps.map((s) => `<li class="${order.indexOf(s[0]) <= order.indexOf(st) ? 'done' : ''}"><b>${s[1]}</b><small>${s[2]}</small></li>`).join('')}</ol></div>
     ${!a.fixed && st !== 'ready' ? '<p class="hint">Демо-режим: заявка сама проходит этапы за пару минут — в реальной системе статус меняет сотрудник деканата.</p>' : ''}`);
@@ -256,12 +257,29 @@ function vLogin() {
 }
 
 // ---------- router ----------
-function render() {
+// Плавные переходы: View Transitions API. Направление сдвига — по порядку вкладок и глубине экрана.
+const ORDER = ['today', 'schedule', 'grades', 'apps', 'profile', 'notices'];
+const reduceMotion = () => matchMedia('(prefers-reduced-motion: reduce)').matches;
+let prev = null;
+function render(opts = {}) {
   const h = location.hash.replace(/^#\/?/, '');
-  if (!S.data) { $app.innerHTML = vLogin(); bindLogin(); return; }
-  const [r, sub] = h.split('/');
-  const v = { today: vToday, schedule: vSchedule, grades: vGrades, apps: sub === 'new' ? vNewApp : sub ? () => vAppDetail(decodeURIComponent(sub)) : vApps, notices: vNotices, profile: vProfile }[r] || vToday;
-  $app.innerHTML = v(); bind(r, sub); window.scrollTo(0, 0);
+  const [r0, sub] = h.split('/');
+  const r = S.data ? (ORDER.includes(r0) ? r0 : 'today') : 'login';
+  const cur = { r, sub: sub || '', day: selDay };
+  const go = () => {
+    if (!S.data) { $app.innerHTML = vLogin(); bindLogin(); return; }
+    const v = { today: vToday, schedule: vSchedule, grades: vGrades, apps: sub === 'new' ? vNewApp : sub ? () => vAppDetail(decodeURIComponent(sub)) : vApps, notices: vNotices, profile: vProfile }[r];
+    $app.innerHTML = v(); bind(r, sub); if (!opts.keepScroll) window.scrollTo(0, 0);
+  };
+  const p = prev; prev = cur;
+  if (opts.instant || !p || !document.startViewTransition || reduceMotion()) { go(); return; }
+  let dir = 1;
+  if (p.r === 'login' || r === 'login') dir = r === 'login' ? -1 : 1;
+  else if (p.r === r && p.sub !== cur.sub) dir = cur.sub ? 1 : -1;
+  else if (p.r === r) dir = (cur.day ?? 0) >= (p.day ?? 0) ? 1 : -1;
+  else dir = ORDER.indexOf(r) >= ORDER.indexOf(p.r) ? 1 : -1;
+  document.documentElement.dataset.dir = dir > 0 ? 'fwd' : 'back';
+  const t = document.startViewTransition(go); t.ready.catch(() => {}); t.finished.catch(() => {});
 }
 function toast(t) { const el = document.createElement('div'); el.className = 'toast'; el.textContent = t; document.body.append(el); setTimeout(() => el.remove(), 2600); }
 function bindLogin() {
@@ -279,7 +297,17 @@ function bind(r, sub) {
   if (r === 'schedule' || (!r)) document.querySelectorAll('[data-day]').forEach((b) => b.onclick = () => { selDay = +b.dataset.day; render(); });
   if (r === 'profile') {
     document.getElementById('out').onclick = logout;
-    document.getElementById('theme').onclick = () => { const dark = matchMedia('(prefers-color-scheme: dark)').matches; const cur = document.documentElement.dataset.theme || (dark ? 'dark' : 'light'); const nx = cur === 'dark' ? 'light' : 'dark'; document.documentElement.dataset.theme = nx; store.set('dd.theme', nx); };
+    document.getElementById('theme').onclick = (e) => {
+      const root = document.documentElement; const dark = matchMedia('(prefers-color-scheme: dark)').matches;
+      const nx = (root.dataset.theme || (dark ? 'dark' : 'light')) === 'dark' ? 'light' : 'dark';
+      const apply = () => { root.dataset.theme = nx; store.set('dd.theme', nx); };
+      if (!document.startViewTransition || reduceMotion()) return apply();
+      const x = e.clientX || innerWidth / 2, y = e.clientY || innerHeight / 2, rad = Math.hypot(Math.max(x, innerWidth - x), Math.max(y, innerHeight - y));
+      root.dataset.vt = 'theme';
+      const t = document.startViewTransition(apply);
+      t.ready.catch(() => {}); t.ready.then(() => root.animate({ clipPath: [`circle(0px at ${x}px ${y}px)`, `circle(${rad}px at ${x}px ${y}px)`] }, { duration: 560, easing: 'cubic-bezier(.4,0,.2,1)', pseudoElement: '::view-transition-new(root)' }));
+      t.finished.finally(() => { delete root.dataset.vt; });
+    };
   }
   if (r === 'apps' && sub === 'new') {
     const f = document.getElementById('appf');
@@ -295,5 +323,5 @@ function bind(r, sub) {
 }
 (() => { const t = store.get('dd.theme'); if (t) document.documentElement.dataset.theme = t; })();
 window.addEventListener('hashchange', render);
-setInterval(() => { if (S.data && /^#\/(apps|today)/.test(location.hash) && !document.querySelector('form')) render(); }, 15000);
+setInterval(() => { if (S.data && /^#\/(apps|today)/.test(location.hash) && !document.querySelector('form')) render({ instant: true, keepScroll: true }); }, 15000);
 restore().then(render);

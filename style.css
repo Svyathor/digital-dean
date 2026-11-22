@@ -169,7 +169,8 @@ html{--d:1} html[data-dir="back"]{--d:-1}
 ::view-transition-new(page){animation:.42s cubic-bezier(.22,.8,.2,1) .04s both vt-in}
 @keyframes vt-out{to{opacity:0;transform:translateX(calc(var(--d) * -28px))}}
 @keyframes vt-in{from{opacity:0;transform:translateX(calc(var(--d) * 40px))}}
-::view-transition-old(tab-pill),::view-transition-new(tab-pill){animation:none;height:100%}
+::view-transition-old(tab-pill){display:none}
+::view-transition-new(tab-pill){animation:none;height:100%}
 ::view-transition-group(tab-pill){animation-duration:.46s;animation-timing-function:cubic-bezier(.3,1.25,.4,1)}
 html[data-vt="theme"] *{view-transition-name:none !important}
 html[data-vt="theme"]::view-transition-old(root),html[data-vt="theme"]::view-transition-new(root){animation:none;mix-blend-mode:normal}

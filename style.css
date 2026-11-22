@@ -196,3 +196,8 @@ html[data-nav] .tabs{backdrop-filter:none;-webkit-backdrop-filter:none;backgroun
 .day-list{position:relative;overflow:hidden}
 .dl-pane.out{position:absolute;top:0;left:16px;right:16px;pointer-events:none}
 .dl-pane .cls:last-child{border-bottom:0}
+/* без синих прямоугольников при нажатии: убираем подсветку тапа и рамку фокуса от мыши/пальца; для клавиатуры — аккуратное кольцо */
+*{-webkit-tap-highlight-color:transparent}
+:focus:not(:focus-visible){outline:none}
+.btn:focus-visible,.tabs a:focus-visible,.days button:focus-visible,.iconbtn:focus-visible,.chips label:focus-within{outline:none;box-shadow:0 0 0 3px color-mix(in srgb,var(--blue) 35%,transparent)}
+.app:focus-visible,.tile:focus-visible,.brand:focus-visible,.back:focus-visible{outline:2px solid color-mix(in srgb,var(--blue) 50%,transparent);outline-offset:4px;border-radius:10px}

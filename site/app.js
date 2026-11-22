@@ -97,7 +97,7 @@ function lessonHTML(l, live) {
   const [s, e, title, kind, room, teacher, ch = {}] = l;
   const flags = [ch.cancelled && `<span class="flag r">${esc(ch.cancelled)}</span>`, ch.moved && `<span class="flag a">${esc(ch.moved)}</span>`, ch.room && `<span class="flag a">${esc(ch.room)}</span>`].filter(Boolean).join(' ');
   return `<div class="cls ${ch.cancelled ? 'off' : ''} ${live ? 'now' : ''}"><div class="t">${s}<small>${e}</small></div>
-    <div><h3>${esc(title)}</h3><div class="meta">${esc(kind)} · ауд. ${esc(room)} · ${esc(teacher)}</div>${live ? '<span class="flag r">Идёт сейчас</span> ' : ''}${flags}</div></div>`;
+    <div><h3>${esc(title)}</h3><div class="meta">${esc(kind)}, ауд. ${esc(room)}, ${esc(teacher)}</div>${live ? '<span class="flag r">Идёт сейчас</span> ' : ''}${flags}</div></div>`;
 }
 const ICONS = {
   today: '<path d="M3 10h18M7 3v4M17 3v4M4 6h16v15H4z"/>',
@@ -106,7 +106,7 @@ const ICONS = {
   apps: '<path d="M7 3h8l4 4v14H7zM15 3v4h4M10 12h6M10 16h6"/>',
   profile: '<circle cx="12" cy="8" r="4"/><path d="M4 21c1-4 4-6 8-6s7 2 8 6"/>',
 };
-const SEAL = `<svg class="seal" viewBox="0 0 40 40" aria-hidden="true"><circle cx="20" cy="20" r="18" fill="none" stroke="currentColor" stroke-width="1.5"/><circle cx="20" cy="20" r="14" fill="none" stroke="currentColor" stroke-width=".8" stroke-dasharray="2 2"/><text x="20" y="26" text-anchor="middle" font-family="Literata,serif" font-size="17" font-weight="700" fill="currentColor">Д</text></svg>`;
+const SEAL = `<svg class="seal" viewBox="0 0 40 40" aria-hidden="true"><circle cx="20" cy="20" r="18" fill="none" stroke="currentColor" stroke-width="1.5"/><circle cx="20" cy="20" r="14" fill="none" stroke="currentColor" stroke-width=".8" stroke-dasharray="2 2"/><text x="20" y="26" text-anchor="middle" font-family="Prata,serif" font-size="18" fill="currentColor">Д</text></svg>`;
 
 function shell(route, body) {
   const now = new Date(); const u = unreadCount();
@@ -117,6 +117,10 @@ function shell(route, body) {
     <main>${body}</main></div>
     <nav class="tabs" aria-label="Разделы">${tab('today', 'Сегодня')}${tab('schedule', 'Расписание')}${tab('grades', 'Учёба')}${tab('apps', 'Заявки')}${tab('profile', 'Профиль')}</nav>`;
 }
+
+const TR={а:'A',б:'B',в:'V',г:'G',д:'D',е:'E',ё:'E',ж:'ZH',з:'Z',и:'I',й:'I',к:'K',л:'L',м:'M',н:'N',о:'O',п:'P',р:'R',с:'S',т:'T',у:'U',ф:'F',х:'KH',ц:'TS',ч:'CH',ш:'SH',щ:'SHCH',ъ:'',ы:'Y',ь:'',э:'E',ю:'IU',я:'IA'};
+const lat=(s)=>[...String(s).toLowerCase()].map((c)=>TR[c]??(/[a-z0-9]/.test(c)?c.toUpperCase():'<')).join('');
+function mrz(p){const [f,n]=p.name.split(' ');return esc((`STUD<RUS<${lat(f)}<<${lat(n)}<<${lat(p.group)}<${lat(p.record)}`+'<'.repeat(44)).slice(0,44)).replace(/</g,'&lt;');}
 
 // ---------- views ----------
 function vToday() {
@@ -142,14 +146,17 @@ function vToday() {
   const avg = Math.round(d.grades.reduce((s, g) => s + g.points, 0) / d.grades.length);
   const risk = d.grades.filter((g) => g.points < 60);
   return shell('today', `
-    <section class="lead"><h1>${esc(headline)}</h1><p>${esc(sub)}</p></section>
-    <section class="sec"><h2>Сегодня <a href="#/schedule">вся неделя →</a></h2><div class="card">${today.length ? today.map((l) => lessonHTML(l, l === next && live)).join('') : '<div class="empty">Свободный день</div>'}</div></section>
-    ${changes.length ? `<section class="sec"><h2>Изменения на неделе</h2><div class="card">${changes.map((c) => `<div class="notice"><span class="ic">↻</span><div><h3>${esc(c.l[2])}</h3><p>${DOWF[c.day]}, ${c.l[0]} — ${esc(Object.values(c.l[6])[0])}</p></div></div>`).join('')}</div></section>` : ''}
+    <section class="pass"><div class="who"><span>${esc(d.profile.name)}</span><span>${esc(d.profile.group)}</span></div>
+      <div class="who" style="margin-top:2px;opacity:.65"><span>${DOWF[now.getDay()]}, ${fmtD(now)}</span><span>${d.profile.course} курс</span></div>
+      <h1>${esc(headline)}</h1><p>${esc(sub)}</p>
+      <div class="mrz">${mrz(d.profile)}</div></section>
+    <section class="sec"><h2>Сегодня <a href="#/schedule">Вся неделя</a></h2><div class="card">${today.length ? today.map((l) => lessonHTML(l, l === next && live)).join('') : '<div class="empty">Свободный день</div>'}</div></section>
+    ${changes.length ? `<section class="sec"><h2>Изменения на неделе</h2><div class="card">${changes.map((c) => `<div class="notice"><span class="ic change">↻</span><div><h3>${esc(c.l[2])}</h3><p>${DOWF[c.day]}, ${c.l[0]} — ${esc(Object.values(c.l[6])[0])}</p></div></div>`).join('')}</div></section>` : ''}
     <div class="grid2 sec">
-      <a class="card" href="#/grades" style="text-decoration:none"><small style="color:var(--muted)">Средний балл семестра</small><div class="big">${avg}</div><div class="hint">${risk.length ? `⚠ ${esc(risk[0].subject)}: ${risk[0].points} — есть риск` : 'Все дисциплины выше порога'}</div></a>
-      <a class="card" href="#/apps" style="text-decoration:none"><small style="color:var(--muted)">Мои заявки</small>${openApps.length ? openApps.map((a) => `<div style="display:flex;justify-content:space-between;gap:8px;margin-top:8px"><span>${esc(a.type)}</span><span class="stamp ${STATUS[status(a)][1]}">${STATUS[status(a)][0]}</span></div>`).join('') : '<div class="hint">Заявок пока нет</div>'}</a>
+      <a class="tile" href="#/grades"><small>Средний балл семестра</small><div class="big">${avg}</div><div class="hint">${risk.length ? `⚠ ${esc(risk[0].subject)}: ${risk[0].points} — есть риск` : 'Все дисциплины выше порога'}</div></a>
+      <a class="tile" href="#/apps"><small>Мои заявки</small>${openApps.length ? openApps.map((a) => `<div style="display:flex;justify-content:space-between;gap:8px;margin-top:8px"><span>${esc(a.type)}</span><span class="stamp ${STATUS[status(a)][1]}">${STATUS[status(a)][0]}</span></div>`).join('') : '<div class="hint">Заявок пока нет</div>'}</a>
     </div>
-    ${deadlines.length ? `<section class="sec"><h2>Дедлайны</h2><div class="card">${deadlines.map((n) => `<div class="notice"><span class="ic">⏳</span><div><h3>${esc(n[2])}</h3><p>${esc(n[3])}</p></div></div>`).join('')}</div></section>` : ''}
+    ${deadlines.length ? `<section class="sec"><h2>Дедлайны</h2><div class="card">${deadlines.map((n) => `<div class="notice"><span class="ic deadline">!</span><div><h3>${esc(n[2])}</h3><p>${esc(n[3])}</p></div></div>`).join('')}</div></section>` : ''}
   `);
 }
 
@@ -178,23 +185,23 @@ function vGrades() {
     const [m, c] = mark(g.points); const need = g.points < 70 ? 70 - g.points : g.points < 86 ? 86 - g.points : 0;
     return `<div class="subj"><div class="row"><h3>${esc(g.subject)}</h3><span class="pts">${g.points}</span></div>
       <div class="bar ${g.points < 60 ? 'low' : ''}"><i style="width:${g.points}%"></i></div>
-      <div class="ticks"><span>${esc(g.kind)} · <span class="flag ${c}" style="margin:0">${m}</span></span><span>${need ? `до «${g.points < 70 ? 'хорошо' : 'отлично'}» ${need} ${plural(need, 'балл', 'балла', 'баллов')}` : 'максимальная оценка'}</span></div>
+      <div class="ticks"><span><span class="flag ${c}" style="margin:0">${m}</span> ${esc(g.kind)}</span><span>${need ? `до «${g.points < 70 ? 'хорошо' : 'отлично'}» ${need} ${plural(need, 'балл', 'балла', 'баллов')}` : 'максимальная оценка'}</span></div>
       <details><summary>Из чего сложилось</summary><table>${g.items.map((i) => `<tr><td>${esc(i[0])}</td><td>${i[1]} / ${i[2]}</td></tr>`).join('')}</table></details></div>`;
   }).join('');
   return shell('grades', `<section class="lead"><h1>Как у меня дела</h1><p>Средний балл ${avg} из 100 — это «${mk}». ${scholarship ? 'Вы проходите на стипендию.' : 'Для стипендии нужно «хорошо» по всем дисциплинам.'}</p></section>
-    <section class="sec"><h2>Текущий семестр · 100-балльная шкала</h2><div class="card">${rows}</div></section>
-    <section class="sec"><h2>Сессия</h2><div class="card">${d.session.map((s) => { const n = daysTo(s[0]); const dt = new Date(s[0] + 'T00:00:00'); return `<div class="notice"><span class="ic">✎</span><div><h3>${esc(s[1])}</h3><p>${fmtD(dt)} · ${esc(s[2])} · ауд. ${esc(s[3])}</p><small>через ${n} ${plural(n, 'день', 'дня', 'дней')}</small></div></div>`; }).join('')}</div></section>`);
+    <section class="sec"><h2>Текущий семестр</h2><div class="card">${rows}</div></section>
+    <section class="sec"><h2>Сессия</h2><div class="card">${d.session.map((s) => { const n = daysTo(s[0]); const dt = new Date(s[0] + 'T00:00:00'); return `<div class="notice"><span class="ic">✎</span><div><h3>${esc(s[1])}</h3><p>${fmtD(dt)}, ${esc(s[2])}, ауд. ${esc(s[3])}</p><small>через ${n} ${plural(n, 'день', 'дня', 'дней')}</small></div></div>`; }).join('')}</div></section>`);
 }
 
 function vApps() {
   return shell('apps', `<section class="lead"><h1>Заявки и справки</h1><p>Закажите справку или подайте заявление — без очереди в деканат.</p></section>
     <a class="btn w" href="#/apps/new">+ Новая заявка</a>
-    <section class="sec"><h2>История</h2><div class="card">${S.apps.length ? S.apps.map((a) => { const [l, c] = STATUS[status(a)]; return `<a class="app" href="#/apps/${encodeURIComponent(a.id)}"><div><h3>${esc(a.type)}</h3><small>№ ${esc(a.id)} · ${fmtD(new Date(a.created))}</small></div><span class="stamp ${c}">${l}</span></a>`; }).join('') : '<div class="empty">Здесь появятся ваши заявки</div>'}</div></section>`);
+    <section class="sec"><h2>История</h2><div class="card">${S.apps.length ? S.apps.map((a) => { const [l, c] = STATUS[status(a)]; return `<a class="app" href="#/apps/${encodeURIComponent(a.id)}"><div><h3>${esc(a.type)}</h3><small>№ ${esc(a.id)}, ${fmtD(new Date(a.created))}</small></div><span class="stamp ${c}">${l}</span></a>`; }).join('') : '<div class="empty">Здесь появятся ваши заявки</div>'}</div></section>`);
 }
 
 function vNewApp() {
   return shell('apps', `<a class="back" href="#/apps">← Заявки</a><section class="lead"><h1>Новая заявка</h1></section>
-    <form id="appf" class="card" novalidate>
+    <form id="appf" class="card pad" novalidate>
       <label class="f">Что нужно<select name="type" required>${APP_TYPES.map((t) => `<option>${esc(t[0])}</option>`).join('')}</select></label>
       <div class="hint" id="thint">${esc(APP_TYPES[0][1])}</div>
       <label class="f">Куда предоставить<input name="target" maxlength="120" placeholder="Например: по месту работы родителей"></label>
@@ -214,8 +221,8 @@ function vAppDetail(id) {
   const steps = [['new', 'Заявка принята', 'Номер присвоен, деканат получил уведомление'], ['work', 'В работе', 'Специалист готовит документ'], ['ready', 'Готово', a.format?.startsWith('Бумажная') ? 'Заберите в деканате, окно 3, с паспортом' : 'Документ с электронной подписью — в профиле и на почте']];
   const order = ['new', 'work', 'ready'];
   return shell('apps', `<a class="back" href="#/apps">← Заявки</a>
-    <section class="lead"><small style="color:var(--muted)">№ ${esc(a.id)} · ${fmtD(new Date(a.created))}</small><h1>${esc(a.type)}</h1><span class="stamp huge ${c}">${l}</span></section>
-    <div class="card"><dl class="kv"><dt>Куда</dt><dd>${esc(a.target || '—')}</dd><dt>Формат</dt><dd>${esc(a.format || 'Электронная с подписью')}</dd>${a.note ? `<dt>Комментарий</dt><dd>${esc(a.note)}</dd>` : ''}</dl>
+    <section class="lead"><small style="color:var(--muted)">№ ${esc(a.id)} от ${fmtD(new Date(a.created))}</small><h1>${esc(a.type)}</h1><span class="stamp huge ${c}">${l}</span></section>
+    <div class="card pad"><dl class="kv"><dt>Куда</dt><dd>${esc(a.target || '—')}</dd><dt>Формат</dt><dd>${esc(a.format || 'Электронная с подписью')}</dd>${a.note ? `<dt>Комментарий</dt><dd>${esc(a.note)}</dd>` : ''}</dl>
     <ol class="tl">${steps.map((s) => `<li class="${order.indexOf(s[0]) <= order.indexOf(st) ? 'done' : ''}"><b>${s[1]}</b><small>${s[2]}</small></li>`).join('')}</ol></div>
     ${!a.fixed && st !== 'ready' ? '<p class="hint">Демо-режим: заявка сама проходит этапы за пару минут — в реальной системе статус меняет сотрудник деканата.</p>' : ''}`);
 }
@@ -223,7 +230,7 @@ function vAppDetail(id) {
 function vNotices() {
   const s = seen();
   const html = shell('notices', `<section class="lead"><h1>Уведомления</h1><p>Новости деканата, дедлайны и изменения расписания.</p></section>
-    <div class="card">${S.data.notices.map((n) => `<div class="notice ${s.includes(n[2]) ? '' : 'unread'}"><span class="ic">${n[1] === 'change' ? '↻' : n[1] === 'deadline' ? '⏳' : '✉'}</span><div><h3>${esc(n[2])}</h3><p>${esc(n[3])}</p><small>${fmtD(new Date(n[0] + 'T12:00:00'))}</small></div></div>`).join('')}</div>`);
+    <div class="card">${S.data.notices.map((n) => `<div class="notice ${s.includes(n[2]) ? '' : 'unread'}"><span class="ic ${n[1]}">${n[1] === 'change' ? '↻' : n[1] === 'deadline' ? '!' : '✉'}</span><div><h3>${esc(n[2])}</h3><p>${esc(n[3])}</p><small>${fmtD(new Date(n[0] + 'T12:00:00'))}</small></div></div>`).join('')}</div>`);
   store.set('dd.seen.' + S.uid, S.data.notices.map((n) => n[2]));
   return html;
 }
@@ -231,20 +238,21 @@ function vNotices() {
 function vProfile() {
   const p = S.data.profile;
   return shell('profile', `<section class="lead"><h1>${esc(p.name)}</h1><p>${esc(p.program)}, ${p.course} курс</p></section>
-    <div class="card"><dl class="kv"><dt>Факультет</dt><dd>${esc(p.faculty)}</dd><dt>Направление</dt><dd>${esc(p.program)}</dd><dt>Курс</dt><dd>${p.course}</dd><dt>Группа</dt><dd>${esc(p.group)}</dd><dt>Зачётная книжка</dt><dd>${esc(p.record)}</dd><dt>Почта</dt><dd>${esc(p.email)}</dd><dt>Куратор</dt><dd>${esc(p.advisor)}</dd></dl></div>
-    <section class="sec"><h2>Безопасность</h2><div class="card"><p style="margin:0">Ваши данные зашифрованы ключом, который получается из вашего пароля. Пароль нигде не хранится, а без него данные не прочитать — даже зная адрес.</p></div></section>
+    <div class="card pad"><dl class="kv"><dt>Факультет</dt><dd>${esc(p.faculty)}</dd><dt>Направление</dt><dd>${esc(p.program)}</dd><dt>Курс</dt><dd>${p.course}</dd><dt>Группа</dt><dd>${esc(p.group)}</dd><dt>Зачётная книжка</dt><dd>${esc(p.record)}</dd><dt>Почта</dt><dd>${esc(p.email)}</dd><dt>Куратор</dt><dd>${esc(p.advisor)}</dd></dl></div>
+    <section class="sec"><h2>Безопасность</h2><div class="card pad"><p style="margin:0">Ваши данные зашифрованы ключом, который получается из вашего пароля. Пароль нигде не хранится, а без него данные не прочитать — даже зная адрес.</p></div></section>
     <div class="sec" style="display:flex;gap:10px;flex-wrap:wrap"><button class="btn ghost" id="theme">Сменить тему</button><button class="btn" id="out">Выйти</button></div>`);
 }
 
 function vLogin() {
-  return `<div class="login"><form class="box" id="lf" novalidate>${SEAL.replace('class="seal"', 'class="seal" style="width:56px;height:56px"')}
-    <h1>Деканат,<br>который на вашей стороне.</h1><p class="s">Расписание, оценки, справки и новости — в одном месте.</p>
+  return `<div class="login"><div class="box"><section class="pass"><div class="who"><span>Студенческий кабинет</span><span>концепт</span></div>
+    <h1>Деканат, который на вашей стороне</h1><p>Расписание, оценки, справки и новости деканата в одном месте.</p>
+    <div class="mrz">DEKANAT&lt;&lt;STUDENT&lt;&lt;ACCESS&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;</div></section><form id="lf" novalidate>
     <label class="f">Логин<input name="l" autocomplete="username" autocapitalize="none" required></label>
     <label class="f">Пароль<input name="p" type="password" autocomplete="current-password" required></label>
     <div class="err" id="lerr" role="alert"></div>
     <button class="btn w" type="submit" id="lbtn">Войти</button>
     <div class="demo">Тестовые аккаунты для жюри: <button type="button" data-l="vetrova" data-p="Depesha-2026">vetrova</button> · <button type="button" data-l="kravets" data-p="Rotunda-2026">kravets</button><br>Концепт для конкурса. Все люди и данные вымышлены.</div>
-  </form></div>`;
+  </form></div></div>`;
 }
 
 // ---------- router ----------

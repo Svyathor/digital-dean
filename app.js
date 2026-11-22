@@ -169,12 +169,12 @@ function vSchedule() {
   const btns = [1, 2, 3, 4, 5, 6].map((i) => {
     const dt = new Date(monday); dt.setDate(monday.getDate() + i - 1);
     const hasCh = (d.schedule[i] || []).some((l) => l[6]);
-    return `<button data-day="${i}" aria-pressed="${i === selDay}"><small>${DOW[i]}</small><b>${dt.getDate()}</b>${hasCh ? '<span class="pip" title="Есть изменения"></span>' : ''}</button>`;
+    return `<button data-day="${i}" aria-pressed="${i === selDay}">${i === selDay ? '<span class="seg"></span>' : ''}<small>${DOW[i]}</small><b>${dt.getDate()}</b>${hasCh ? '<span class="pip" title="Есть изменения"></span>' : ''}</button>`;
   }).join('');
   const ls = d.schedule[selDay] || [];
   return shell('schedule', `<section class="lead"><h1>Расписание</h1><p>Неделя ${fmtD(monday)} — изменения отмечены красной точкой.</p></section>
     <div class="days" role="group" aria-label="День недели">${btns}</div>
-    <div class="card">${ls.length ? ls.map((l) => lessonHTML(l)).join('') : '<div class="empty">В этот день занятий нет</div>'}</div>`);
+    <div class="card day-list"><div class="dl-pane">${ls.length ? ls.map((l) => lessonHTML(l)).join('') : '<div class="empty">В этот день занятий нет</div>'}</div></div>`);
 }
 
 function vGrades() {
@@ -256,6 +256,35 @@ function vLogin() {
   </form></div></div>`;
 }
 
+
+// Смена дня без перерисовки страницы: подложка переезжает под текстом, таблица листается, высота карточки плавно подстраивается.
+function switchDay(nd) {
+  if (nd === selDay) return;
+  const dir = nd > selDay ? 1 : -1; selDay = nd; prev = { ...prev, day: nd };
+  const days = document.querySelector('.days'); const seg = days.querySelector('.seg');
+  const btn = days.querySelector(`[data-day="${nd}"]`);
+  const from = seg.getBoundingClientRect();
+  days.querySelectorAll('[data-day]').forEach((b) => b.setAttribute('aria-pressed', String(b === btn)));
+  btn.prepend(seg);
+  btn.scrollIntoView({ block: 'nearest', inline: 'nearest', behavior: reduceMotion() ? 'auto' : 'smooth' });
+  const to = seg.getBoundingClientRect();
+  const card = document.querySelector('.day-list');
+  const ls = S.data.schedule[nd] || [];
+  const html = ls.length ? ls.map((l) => lessonHTML(l)).join('') : '<div class="empty">В этот день занятий нет</div>';
+  if (reduceMotion()) { card.innerHTML = `<div class="dl-pane">${html}</div>`; return; }
+  seg.animate([{ transform: `translateX(${from.left - to.left}px)` }, { transform: 'none' }], { duration: 420, easing: 'cubic-bezier(.3,1.15,.4,1)' });
+  card.querySelectorAll('.dl-pane.out').forEach((e) => e.remove());
+  const cur = card.querySelector('.dl-pane');
+  const oldHTML = cur ? cur.innerHTML : card.innerHTML;
+  const h0 = card.getBoundingClientRect().height;
+  card.innerHTML = `<div class="dl-pane">${html}</div><div class="dl-pane out" aria-hidden="true">${oldHTML}</div>`;
+  const [nw, old] = card.children;
+  const h1 = card.getBoundingClientRect().height;
+  card.animate([{ height: h0 + 'px' }, { height: h1 + 'px' }], { duration: 420, easing: 'cubic-bezier(.22,.8,.2,1)' });
+  old.animate([{ transform: 'none', opacity: 1 }, { transform: `translateX(${-dir * 55}%)`, opacity: 0 }], { duration: 320, easing: 'cubic-bezier(.4,0,.2,1)', fill: 'forwards' }).finished.then(() => old.remove()).catch(() => {});
+  nw.animate([{ transform: `translateX(${dir * 55}%)`, opacity: 0 }, { transform: 'none', opacity: 1 }], { duration: 440, easing: 'cubic-bezier(.22,.8,.2,1)' });
+}
+
 // ---------- router ----------
 // Плавные переходы: View Transitions API. Направление сдвига — по порядку вкладок и глубине экрана.
 const ORDER = ['today', 'schedule', 'grades', 'apps', 'profile', 'notices'];
@@ -279,7 +308,9 @@ function render(opts = {}) {
   else if (p.r === r) dir = (cur.day ?? 0) >= (p.day ?? 0) ? 1 : -1;
   else dir = ORDER.indexOf(r) >= ORDER.indexOf(p.r) ? 1 : -1;
   document.documentElement.dataset.dir = dir > 0 ? 'fwd' : 'back';
-  const t = document.startViewTransition(go); t.ready.catch(() => {}); t.finished.catch(() => {});
+  const root = document.documentElement; root.dataset.nav = "moving";
+
+  const t = document.startViewTransition(go); t.ready.catch(() => {}); t.finished.catch(() => {}).finally(() => { delete root.dataset.nav; delete root.dataset.kind; });
 }
 function toast(t) { const el = document.createElement('div'); el.className = 'toast'; el.textContent = t; document.body.append(el); setTimeout(() => el.remove(), 2600); }
 function bindLogin() {
@@ -294,7 +325,7 @@ function bindLogin() {
   };
 }
 function bind(r, sub) {
-  if (r === 'schedule' || (!r)) document.querySelectorAll('[data-day]').forEach((b) => b.onclick = () => { selDay = +b.dataset.day; render(); });
+  if (r === 'schedule' || (!r)) document.querySelectorAll('[data-day]').forEach((b) => b.onclick = () => switchDay(+b.dataset.day));
   if (r === 'profile') {
     document.getElementById('out').onclick = logout;
     document.getElementById('theme').onclick = (e) => {
